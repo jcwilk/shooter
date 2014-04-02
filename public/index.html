@@ -33,11 +33,13 @@ var pointer;
 
 var stars;
 var bullets;
+var enemyBullets;
 
 var score = 0;
 var scoreText;
 var fireRate = 500;
 var nextFire = 0;
+var nextEnemyFire = 0;
 
 function create() {
 
@@ -98,6 +100,15 @@ function create() {
     bullets.setAll('checkWorldBounds', true);
     bullets.setAll('outOfBoundsKill', true);
 
+    // enemy bullets
+    enemyBullets = game.add.group();
+    enemyBullets.enableBody = true;
+    enemyBullets.physicsBodyType = Phaser.Physics.ARCADE;
+
+    enemyBullets.createMultiple(50, 'star');
+    enemyBullets.setAll('checkWorldBounds', true);
+    enemyBullets.setAll('outOfBoundsKill', true);
+
     //  Finally some stars to collect
     stars = game.add.group();
 
@@ -114,6 +125,7 @@ function create() {
         star.body.velocity.y = 200 + Math.random() * 200;
         star.body.velocity.x = -400 + Math.random() * 800;
         star.body.collideWorldBounds = true;
+        star.hp = 2;
 
         //  This just gives each star a slightly random bounce value
         star.body.bounce.y = 1;
@@ -147,12 +159,22 @@ function update() {
     game.physics.arcade.collide(player, platforms);
     game.physics.arcade.collide(stars, platforms);
 
-    //  Checks to see if the bullets overlap with any of the stars, if they do, call the collectStar function
-    game.physics.arcade.overlap(bullets, stars, collectStar, null, this);
+    game.physics.arcade.overlap(bullets, stars, shootEnemy, null, this);
 
     game.physics.arcade.overlap(bullets, platforms, crashBullet, null, this);
+    game.physics.arcade.overlap(enemyBullets, platforms, crashBullet, null, this);
 
-    game.physics.arcade.overlap(stars, player, eatPlayer, null, this);
+    game.physics.arcade.overlap(enemyBullets, player, eatPlayer, null, this);
+
+    var expireBullets = function(item) {
+      if (item.dieAt <= game.time.now){
+        item.kill();
+      }
+    }
+
+    //clean up bullets that have gone too far
+    bullets.forEachAlive(expireBullets);
+    enemyBullets.forEachAlive(expireBullets);
 
     //  Reset the players velocity (movement)
     player.body.velocity.x = 0;
@@ -190,11 +212,28 @@ function update() {
         player.frame = 4;
     }
 
+    fireAtPlayer();
+
     if (game.input.activePointer.isDown)
     {
         fire();
     }
 
+}
+
+function fireAtPlayer() {
+  if (game.time.now > nextEnemyFire && enemyBullets.countDead() > 0)
+  {
+    nextEnemyFire = game.time.now + fireRate;
+
+    var bullet;
+    stars.forEachAlive(function(baddie){
+      bullet = enemyBullets.getFirstDead();
+      bullet.reset(baddie.x - 8, baddie.y - 8);
+      bullet.dieAt = game.time.now+500;
+      game.physics.arcade.moveToObject(bullet, player, 300);
+    })
+  }
 }
 
 function fire() {
@@ -206,6 +245,7 @@ function fire() {
         var bullet = bullets.getFirstDead();
 
         bullet.reset(player.x - 8, player.y - 8);
+        bullet.dieAt = game.time.now+500;
 
         game.physics.arcade.moveToPointer(bullet, 300);
     }
@@ -213,10 +253,13 @@ function fire() {
 }
 
 
-function collectStar (bullet, star) {
+function shootEnemy (bullet, star) {
 
     // Removes the star from the screen
-    star.kill();
+    bullet.kill();
+
+    star.hp -= 1;
+    if (star.hp <= 0) { star.kill() }
 
     //  Add and update the score
     score += 10;
