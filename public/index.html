@@ -21,6 +21,7 @@ function preload() {
     game.load.image('sky', 'images/sky.png');
     game.load.image('ground', 'images/platform.png');
     game.load.image('star', 'images/star.png');
+    game.load.image('target', 'images/target.png');
     game.load.spritesheet('baddie', 'images/baddie.png', 32, 32);
     game.load.spritesheet('dude', 'images/dude.png', 32, 48);
 
@@ -34,6 +35,7 @@ var pointer;
 var stars;
 var bullets;
 var enemyBullets;
+var targets;
 
 var score = 0;
 var scoreText;
@@ -81,6 +83,7 @@ function create() {
 
     // The player and its settings
     player = game.add.sprite(32, game.world.height - 150, 'dude');
+    player.hp = 50;
     //game.camera.follow(player);
 
     //  We need to enable physics on the player
@@ -108,6 +111,11 @@ function create() {
     enemyBullets.createMultiple(50, 'star');
     enemyBullets.setAll('checkWorldBounds', true);
     enemyBullets.setAll('outOfBoundsKill', true);
+
+    // targets
+    targets = game.add.group();
+    targets.enableBody = true;
+    targets.createMultiple(10, 'target');
 
     //  Finally some stars to collect
     stars = game.add.group();
@@ -175,6 +183,7 @@ function update() {
     //clean up bullets that have gone too far
     bullets.forEachAlive(expireBullets);
     enemyBullets.forEachAlive(expireBullets);
+    targets.forEachAlive(expireBullets);
 
     //  Reset the players velocity (movement)
     player.body.velocity.x = 0;
@@ -214,10 +223,11 @@ function update() {
 
     fireAtPlayer();
 
-    //if (game.input.activePointer.isDown)
-    //{
-        fire();
-    //}
+    fire();
+
+    if (game.input.activePointer.isDown) {
+      game.physics.arcade.moveToPointer(player, 300);
+    }
 
 }
 
@@ -250,13 +260,22 @@ function fire() {
         var nearest = findNearest(player,stars);
 
         if (nearest) {
-          game.physics.arcade.moveToObject(bullet, nearest, 300);
+          //game.physics.arcade.moveToObject(bullet, nearest, 300);
+          var x = nearest.x+nearest.body.velocity.x*0.5;
+          var y = nearest.y+nearest.body.velocity.y*0.5;
+          game.physics.arcade.moveToXY(bullet, x, y, 300);
+
+          var target = targets.getFirstDead();
+          target.reset(x,y);
+          target.dieAt = bullet.dieAt;
         }
 
         //game.physics.arcade.moveToPointer(bullet, 300);
     }
 
 }
+
+//function leadObject()
 
 function findNearest(reference,group) {
   var min;
@@ -265,6 +284,7 @@ function findNearest(reference,group) {
 
   group.forEachAlive(function(member){
     currDist = findRectilinearDistance(member,reference);
+
     if(!min || currDist < min) {
       min = currDist;
       nearest = member;
@@ -275,7 +295,7 @@ function findNearest(reference,group) {
 }
 
 function findRectilinearDistance(a,b) {
-  Math.abs(a.x-b.x) + Math.abs(a.y-b.y);
+  return (Math.abs(a.x-b.x) + Math.abs(a.y-b.y));
 }
 
 
@@ -302,8 +322,13 @@ function crashBullet (bullet, platform) {
 }
 
 function eatPlayer (player, baddie) { //why is the ordering like this? expecting it to be (baddie,player) but it is not :'(
-  player.kill();
-  window.location.reload();
+  baddie.kill();
+  player.hp-= 1;
+  console.log(player.hp);
+  if(player.hp <= 0){
+    player.kill();
+    window.location.reload();
+  }
 }
 
 function render() {
