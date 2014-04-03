@@ -214,10 +214,10 @@ function update() {
 
     fireAtPlayer();
 
-    if (game.input.activePointer.isDown)
-    {
+    //if (game.input.activePointer.isDown)
+    //{
         fire();
-    }
+    //}
 
 }
 
@@ -244,12 +244,38 @@ function fire() {
 
         var bullet = bullets.getFirstDead();
 
-        bullet.reset(player.x - 8, player.y - 8);
+        bullet.reset(player.x, player.y);
         bullet.dieAt = game.time.now+500;
 
-        game.physics.arcade.moveToPointer(bullet, 300);
+        var nearest = findNearest(player,stars);
+
+        if (nearest) {
+          game.physics.arcade.moveToObject(bullet, nearest, 300);
+        }
+
+        //game.physics.arcade.moveToPointer(bullet, 300);
     }
 
+}
+
+function findNearest(reference,group) {
+  var min;
+  var currDist;
+  var nearest;
+
+  group.forEachAlive(function(member){
+    currDist = findRectilinearDistance(member,reference);
+    if(!min || currDist < min) {
+      min = currDist;
+      nearest = member;
+    }
+  });
+
+  return nearest;
+}
+
+function findRectilinearDistance(a,b) {
+  Math.abs(a.x-b.x) + Math.abs(a.y-b.y);
 }
 
 
