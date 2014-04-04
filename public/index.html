@@ -123,17 +123,17 @@ function create() {
     //  We will enable physics for any star that is created in this group
     stars.enableBody = true;
 
-    //  Here we'll create 12 of them evenly spaced apart
-    for (var i = 0; i < 12; i++)
+    //  enemies!
+    for (var i = 0; i < 20; i++)
     {
         //  Create a star inside of the 'stars' group
-        var star = stars.create(i * 70, 0, 'baddie');
+        var star = stars.create(i * 20, 0, 'baddie');
 
         //  Let gravity do its thing
         star.body.velocity.y = 200 + Math.random() * 200;
         star.body.velocity.x = -400 + Math.random() * 800;
         star.body.collideWorldBounds = true;
-        star.hp = 2;
+        star.hp = 10;
 
         //  This just gives each star a slightly random bounce value
         star.body.bounce.y = 1;
@@ -251,23 +251,27 @@ function fire() {
     if (game.time.now > nextFire && bullets.countDead() > 0)
     {
         nextFire = game.time.now + fireRate;
-
-        var bullet = bullets.getFirstDead();
-
-        bullet.reset(player.x, player.y);
-        bullet.dieAt = game.time.now+500;
-
         var nearest = findNearest(player,stars);
 
         if (nearest) {
-          //game.physics.arcade.moveToObject(bullet, nearest, 300);
-          var x = nearest.x+nearest.body.velocity.x*0.5;
-          var y = nearest.y+nearest.body.velocity.y*0.5;
-          game.physics.arcade.moveToXY(bullet, x, y, 300);
+          var deltaT = 0.1;
+          var gonnaHit = false;
+          while(!gonnaHit && deltaT <= 0.5) {
+            gonnaHit = isHit(deltaT, 300, player, nearest);
+            if(gonnaHit) {
+              var bullet = bullets.getFirstDead();
+              bullet.reset(player.x, player.y);
+              bullet.dieAt = game.time.now+500;
 
-          var target = targets.getFirstDead();
-          target.reset(x,y);
-          target.dieAt = bullet.dieAt;
+              var x = nearest.x+nearest.body.velocity.x*deltaT;
+              var y = nearest.y+nearest.body.velocity.y*deltaT;
+              game.physics.arcade.moveToXY(bullet, x, y, 300);
+              var target = targets.getFirstDead();
+              target.reset(x,y);
+              target.dieAt = bullet.dieAt;
+            }
+            deltaT += 0.05;
+          }
         }
 
         //game.physics.arcade.moveToPointer(bullet, 300);
@@ -275,7 +279,30 @@ function fire() {
 
 }
 
-//function leadObject()
+function distSqToMovingTarget(deltaT, shooter, enemy) {
+  var deltaTX = enemy.x + enemy.body.velocity.x*deltaT - shooter.x;
+  var deltaTY = enemy.y + enemy.body.velocity.y*deltaT - shooter.y;
+  return (deltaTX*deltaTX+deltaTY*deltaTY);
+}
+
+function bulletTravelSqlToXY(bulletV, deltaT) {
+  return (bulletV*bulletV*deltaT*deltaT);
+}
+
+function isHit(deltaT, bulletV, shooter, enemy) {
+  var currDist = distSqToMovingTarget(deltaT, shooter, enemy);
+  var currBulletTrav = bulletTravelSqlToXY(bulletV, deltaT);
+  if (Math.abs(currDist-currBulletTrav) < 2000) {
+    console.log('Hit!');
+    return (true);
+  } else if (currDist > currBulletTrav) {
+    console.log('Too far!');
+    return (false);
+  } else { //(currDist < currBulletTrav)
+    console.log('Too close!');
+    return (false);
+  }
+}
 
 function findNearest(reference,group) {
   var min;
