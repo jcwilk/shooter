@@ -21,6 +21,8 @@ function preload() {
     game.load.image('sky', 'images/sky_bubbles.png');
     game.load.image('ground', 'images/platform.png');
     game.load.image('star', 'images/jellyfish_small.png');
+    game.load.image('jellymed', 'images/jellyfish_medium.png');
+    game.load.image('jellybig', 'images/jellyfish_big.png');
     game.load.spritesheet('dude', 'images/octopus.png', 16, 15);
 
 }
@@ -93,9 +95,19 @@ function create() {
     //  Here we'll create 12 of them evenly spaced apart
     for (var i = 0; i < 12; i++)
     {
-        //  Create a star inside of the 'stars' group
-        var star = stars.create(i * 70, 0, 'star');
-        star.scale.set(3);
+        var star;
+        if (i%3 == 0) {
+            star = stars.create(i * 70, 0, 'star');
+            star.scale.set(3);
+        } else if (i%3 == 1) {
+            star = stars.create(i * 70, 0, 'jellymed');
+            star.scale.set(2);
+        } else {
+            star = stars.create(i * 70, 0, 'jellybig');
+            star.scale.set(2);
+        }
+
+
         star.smoothed = false;
 
         //  Let gravity do its thing
