@@ -18,7 +18,7 @@ var game = new Phaser.Game(800, 600, Phaser.AUTO, '', { preload: preload, create
 
 function preload() {
 
-    game.load.image('sky', 'images/sky.png');
+    game.load.image('sky', 'images/sky_bubbles.png');
     game.load.image('ground', 'images/platform.png');
     game.load.image('star', 'images/jellyfish_small.png');
     game.load.spritesheet('dude', 'images/dude.png', 32, 48);
@@ -28,18 +28,24 @@ function preload() {
 var player;
 var platforms;
 var cursors;
+var bgtile;
 
 var stars;
 var score = 0;
 var scoreText;
+
+var xBoundLeft = 0;
+var xBoundRight = 800;
 
 function create() {
 
     //  We're going to be using physics, so enable the Arcade Physics system
     game.physics.startSystem(Phaser.Physics.ARCADE);
 
+    game.world.setBounds(0,0, 1600, 600);
+
     //  A simple background for our game
-    game.add.sprite(0, 0, 'sky');
+    bgtile = game.add.tileSprite(0, 0, 1600, 600, 'sky');
 
     //  The platforms group contains the ground and the 2 ledges we can jump on
     platforms = game.add.group();
@@ -71,7 +77,7 @@ function create() {
 
     //  Player physics properties. Give the little guy a slight bounce.
     player.body.bounce.y = 0.2;
-    player.body.gravity.y = 300;
+    player.body.gravity.y = 500;
     player.body.collideWorldBounds = true;
 
     //  Our two animations, walking left and right.
@@ -89,8 +95,7 @@ function create() {
     {
         //  Create a star inside of the 'stars' group
         var star = stars.create(i * 70, 0, 'star');
-        star.scale.x = 3;
-        star.scale.y = 3;
+        star.scale.set(3);
         star.smoothed = false;
 
         //  Let gravity do its thing
@@ -109,6 +114,13 @@ function create() {
 }
 
 function update() {
+    game.camera.focusOn(player);
+
+    if (xBoundLeft < player.x-400) { xBoundLeft = player.x-400; }
+    if (xBoundRight < player.x+400) { xBoundRight = player.x+400; }
+
+    game.world.setBounds(xBoundLeft,0, xBoundRight, 600);
+    bgtile.width = xBoundRight;
 
     //  Collide the player and the stars with the platforms
     game.physics.arcade.collide(player, platforms);
@@ -142,10 +154,10 @@ function update() {
         player.frame = 4;
     }
 
-    //  Allow the player to jump if they are touching the ground.
-    if (cursors.up.isDown && player.body.touching.down)
+    //  Allow the player to swim
+    if (cursors.up.isDown)
     {
-        player.body.velocity.y = -350;
+        player.body.velocity.y = -250;
     }
 
 }
