@@ -91,6 +91,7 @@ function create() {
         var star = stars.create(i * 70, 0, 'star');
         star.scale.x = 3;
         star.scale.y = 3;
+        star.smoothed = false;
 
         //  Let gravity do its thing
         star.body.gravity.y = 300;
