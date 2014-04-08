@@ -98,16 +98,14 @@ function create() {
         var star;
         if (i%3 == 0) {
             star = stars.create(i * 70, 0, 'star');
-            star.scale.set(3);
+
         } else if (i%3 == 1) {
             star = stars.create(i * 70, 0, 'jellymed');
-            star.scale.set(2);
         } else {
             star = stars.create(i * 70, 0, 'jellybig');
-            star.scale.set(2);
         }
 
-
+        star.scale.set(3);
         star.smoothed = false;
 
         //  Let gravity do its thing
