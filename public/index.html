@@ -38,6 +38,7 @@ var xBoundLeft = 0;
 var xBoundRight = 800;
 
 var nextGroundX = 2400;
+var nextJellyX = 900;
 
 function create() {
 
@@ -115,6 +116,7 @@ function create() {
 function update() {
     game.camera.focusOn(player);
     updatePlatforms();
+    updateJellyfish();
 
     if (xBoundLeft < player.x-400) { xBoundLeft = player.x-400; }
     if (xBoundRight < player.x+400) { xBoundRight = player.x+400; }
@@ -142,6 +144,23 @@ function update() {
         player.animations.stop();
         player.frame = 0;
     }
+}
+
+function updateJellyfish() {
+    var jelly;
+    stars.forEachAlive(function(jelly){
+        if(jelly.x < xBoundLeft-50) {
+            jelly.kill();
+        }
+    });
+    if(nextJellyX < xBoundRight+100) {
+        jelly = stars.getFirstDead();
+        if(jelly){
+            jelly.reset(xBoundRight+50,0);
+            nextJellyX = xBoundRight+200;
+        }
+    }
+
 }
 
 function updatePlatforms() {
