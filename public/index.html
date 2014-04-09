@@ -32,6 +32,7 @@ var player;
 var platforms;
 var cursors;
 var bgtile;
+var puffers;
 
 var stars;
 var score = 0;
@@ -42,7 +43,7 @@ var xBoundRight = 800;
 
 var nextGroundX = 2400;
 var nextJellyX = 900;
-var nextPufferX = 950;
+var nextPufferX = xBoundRight+200;
 
 function create() {
 
@@ -88,6 +89,16 @@ function create() {
 
     //  Our two animations, walking left and right.
     player.animations.add('right', [0, 1, 2], 10, true);
+
+    puffers = game.add.group();
+    puffers.enableBody = true;
+    var puffer = puffers.create(xBoundRight-50, game.world.height - 200, 'puffer');
+    puffer.scale.set(3);
+    puffer.smoothed = false;
+
+    puffer = puffers.create(xBoundRight-200, game.world.height - 200, 'puffer');
+    puffer.scale.set(3);
+    puffer.smoothed = false;
 
     //  Finally some stars to collect
     stars = game.add.group();
@@ -153,7 +164,6 @@ function update() {
         player.body.velocity.x-= 1;
     }
 
-
     if (game.input.activePointer.isDown) {
         player.body.velocity.x = 150;
         player.body.velocity.y = -250;
@@ -164,34 +174,36 @@ function update() {
     }
 }
 
-var puffer;
-
 function updatePuffers() {
-    if(puffer && puffer.x < xBoundLeft-50) {
-        console.log('killin');
-        puffer.kill();
-    }
+
+
+    puffers.forEachAlive(function(puffer){
+        if(puffer.x < xBoundLeft-50) {
+            console.log('killin');
+            puffer.kill();
+        }
+    });
     if (nextPufferX < xBoundRight+50) {
-        if (!puffer) {
-            console.log('puffer!')
-            puffer = game.add.sprite(xBoundRight+50, game.world.height - 200, 'puffer');
-            puffer.scale.set(3);
-            puffer.smoothed = false;
-            //game.physics.arcade.enable(puffer); //y u no work
-            //puffer.body.collideWorldBounds = true;
-            nextPufferX = xBoundRight+200;
-        } else if (!puffer.alive) {
-            puffer.reset(xBoundRight+50, game.world.height - 200);
+        var deadPuffer = puffers.getFirstDead();
+        if(deadPuffer) {
+            console.log('new!');
+            deadPuffer.reset(xBoundRight-50, game.world.height - 200);
+            deadPuffer.frame = 0;
             nextPufferX = xBoundRight+200;
         }
     }
-    if (puffer && puffer.alive) {
+    puffers.forEachAlive(function(puffer){
         if(findRectilinearDistance(player,puffer) < 200) {
             puffer.frame = 1;
+            puffer.body.velocity.x = 0;
+            puffer.body.velocity.y = 0;
         } else {
+            game.physics.arcade.overlap(puffer, stars, destroyJelly, null, this);
             puffer.frame = 0;
+            var target = findNearest(puffer,stars);
+            game.physics.arcade.moveToObject(puffer, target, 100);
         }
-    }
+    });
 }
 
 function updateJellyfish() {
@@ -225,6 +237,23 @@ function findRectilinearDistance(a,b) {
   return (Math.abs(a.x-b.x) + Math.abs(a.y-b.y));
 }
 
+function findNearest(reference,group) {
+  var min;
+  var currDist;
+  var nearest;
+
+  group.forEachAlive(function(member){
+    currDist = findRectilinearDistance(member,reference);
+
+    if(!min || currDist < min) {
+      min = currDist;
+      nearest = member;
+    }
+  });
+
+  return nearest;
+}
+
 function collectStar (player, star) {
 
     // Removes the star from the screen
@@ -234,6 +263,10 @@ function collectStar (player, star) {
     score += 10;
     scoreText.text = 'Score: ' + score;
 
+}
+
+function destroyJelly (_, jelly) {
+    jelly.kill();
 }
 
 </script>
