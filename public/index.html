@@ -18,11 +18,12 @@ var game = new Phaser.Game(800, 600, Phaser.AUTO, '', { preload: preload, create
 
 function preload() {
 
-    game.load.image('sky', 'images/sky_bubbles.png');
+    game.load.image('bgtile', 'images/bgtile.png');
     game.load.image('ground', 'images/platform.png');
     game.load.spritesheet('jellysmall', 'images/jellyfish_small.png', 7, 9);
     game.load.spritesheet('jellymed', 'images/jellyfish_medium.png', 9, 12);
     game.load.spritesheet('jellybig', 'images/jellyfish_big.png', 12, 16);
+    game.load.spritesheet('puffer', 'images/puffer.png', 16, 14);
     game.load.spritesheet('dude', 'images/octopus.png', 15, 13);
 
 }
@@ -41,6 +42,7 @@ var xBoundRight = 800;
 
 var nextGroundX = 2400;
 var nextJellyX = 900;
+var nextPufferX = 950;
 
 function create() {
 
@@ -50,7 +52,8 @@ function create() {
     game.world.setBounds(0,0, 1600, 600);
 
     //  A simple background for our game
-    bgtile = game.add.tileSprite(0, 0, 1600, 600, 'sky');
+    bgtile = game.add.tileSprite(0, 0, 600, 200, 'bgtile'); //divided by 3
+    bgtile.scale.setTo(3);
 
     //  The platforms group contains the ground and the 2 ledges we can jump on
     platforms = game.add.group();
@@ -157,6 +160,15 @@ function update() {
     } else {
         player.animations.stop();
         player.frame = 0;
+    }
+}
+
+var puffer;
+
+function updatePuffers() {
+    if (nextPufferX < xBoundRight+50)
+    if (!puffer) {
+
     }
 }
 
