@@ -134,6 +134,7 @@ function update() {
     game.camera.focusOn(player);
     updatePlatforms();
     updateJellyfish();
+    updatePuffers();
 
     if (xBoundLeft < player.x-400) { xBoundLeft = player.x-400; }
     if (xBoundRight < player.x+400) { xBoundRight = player.x+400; }
@@ -166,9 +167,30 @@ function update() {
 var puffer;
 
 function updatePuffers() {
-    if (nextPufferX < xBoundRight+50)
-    if (!puffer) {
-
+    if(puffer && puffer.x < xBoundLeft-50) {
+        console.log('killin');
+        puffer.kill();
+    }
+    if (nextPufferX < xBoundRight+50) {
+        if (!puffer) {
+            console.log('puffer!')
+            puffer = game.add.sprite(xBoundRight+50, game.world.height - 200, 'puffer');
+            puffer.scale.set(3);
+            puffer.smoothed = false;
+            //game.physics.arcade.enable(puffer); //y u no work
+            //puffer.body.collideWorldBounds = true;
+            nextPufferX = xBoundRight+200;
+        } else if (!puffer.alive) {
+            puffer.reset(xBoundRight+50, game.world.height - 200);
+            nextPufferX = xBoundRight+200;
+        }
+    }
+    if (puffer && puffer.alive) {
+        if(findRectilinearDistance(player,puffer) < 200) {
+            puffer.frame = 1;
+        } else {
+            puffer.frame = 0;
+        }
     }
 }
 
@@ -197,6 +219,10 @@ function updatePlatforms() {
             nextGroundX+=800;
         }
     });
+}
+
+function findRectilinearDistance(a,b) {
+  return (Math.abs(a.x-b.x) + Math.abs(a.y-b.y));
 }
 
 function collectStar (player, star) {
