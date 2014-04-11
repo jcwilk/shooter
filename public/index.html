@@ -109,11 +109,16 @@ function create() {
     puffers = game.add.group();
     puffers.enableBody = true;
     var puffer = puffers.create(xBoundRight-50, game.world.height - 200, 'puffer');
+
     puffer.scale.set(3);
+    //puffer.anchor.setTo(0.5,0.5);
     puffer.smoothed = false;
 
+
     puffer = puffers.create(xBoundRight-200, game.world.height - 200, 'puffer');
+
     puffer.scale.set(3);
+    //puffer.anchor.setTo(0.5,0.5);
     puffer.smoothed = false;
 
     //  Finally some jellies to collect
@@ -239,9 +244,12 @@ function updatePuffers() {
         } else {
             game.physics.arcade.overlap(puffer, jellies, destroyJelly, null, this);
             puffer.frame = 0;
-            var target = findNearest(puffer,jellies);
+            var target = findNearest(puffer,jellies,function(jelly) { return(jelly.x < puffer.x) });
             if (target) {
                 game.physics.arcade.moveToObject(puffer, target, 100);
+            } else {
+                puffer.body.velocity.x = -100;
+                puffer.body.velocity.y = 0;
             }
         }
     });
@@ -279,18 +287,21 @@ function findRectilinearDistance(a,b) {
   return (Math.abs(a.x-b.x) + Math.abs(a.y-b.y));
 }
 
-function findNearest(reference,group) {
+function findNearest(reference,group,filter) {
   var min;
   var currDist;
   var nearest;
 
   group.forEachAlive(function(member){
-    currDist = findRectilinearDistance(member,reference);
+    if(!filter || filter(member)) {
+        currDist = findRectilinearDistance(member,reference);
 
-    if(!min || currDist < min) {
-      min = currDist;
-      nearest = member;
+        if(!min || currDist < min) {
+          min = currDist;
+          nearest = member;
+        }
     }
+
   });
 
   return nearest;
