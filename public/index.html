@@ -64,12 +64,12 @@ function create() {
 
     //  A simple background for our game
     bgtile = game.add.tileSprite(0, 0, 900, 600, 'water');
-    bgtile.autoScroll(-30,0);
+    bgtile.autoScroll(-120,0);
 
     skytile = game.add.tileSprite(0, 0, 900, 54, 'sky');
 
     wavetile = game.add.tileSprite(0,54,900,6, 'waves');
-    wavetile.autoScroll(-50,0);
+    wavetile.autoScroll(-150,0);
 
     //  The platforms group contains the ground and the 2 ledges we can jump on
     platforms = game.add.group();
