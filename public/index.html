@@ -203,11 +203,12 @@ function update() {
         if(wasDown+500 > game.time.now) {
             console.log('quick!');
             wasDown = null;
-            var nearestEnemy = findNearest(player,puffers);
-            var dist = findRectilinearDistance(player,nearestEnemy);
-            console.log(dist);
-            if(nearestEnemy && dist < 80) {
-                nearestEnemy.kill();
+            var killed = false;
+            game.physics.arcade.overlap(player, puffers, function(_,puffer){
+                killed = true;
+                puffer.kill();
+            }, null, this);
+            if(killed){
                 isMad = true;
                 player.animations.play('mad');
             }
