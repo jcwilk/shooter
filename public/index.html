@@ -170,7 +170,8 @@ function update() {
     if (xBoundRight < player.x+400) { xBoundRight = player.x+400; }
 
     game.world.setBounds(xBoundLeft,0, xBoundRight+1600, 600);
-    bgtile.width = xBoundRight;
+    bgtile.x = bgtile.x-1;
+    bgtile.width = 0-bgtile.x+xBoundRight;
     skytile.width = xBoundRight;
 
     //  Collide the player and the jellies with the platforms
