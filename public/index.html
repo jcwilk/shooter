@@ -16,6 +16,7 @@
 
 var game = new Phaser.Game(800, 600, Phaser.AUTO, '', { preload: preload, create: create, update: update });
 
+
 function preload() {
 
     game.load.image('water', 'images/bgtile.png');
@@ -59,9 +60,12 @@ function create() {
     //  A simple background for our game
     bgtile = game.add.tileSprite(0, 0, 600, 200, 'water'); //divided by 3
     bgtile.scale.setTo(3);
+    bgtile.smoothed = false;
+    bgtile.autoScroll(-1,0);
 
     skytile = game.add.tileSprite(0, 0, 600, 20, 'sky'); //divided by 3
     skytile.scale.setTo(3);
+    skytile.smoothed = false;
 
     // groundtile = game.add.tileSprite(0, 540, 600, 20, 'ground'); //divided by 3
     // groundtile.scale.setTo(3);
@@ -82,6 +86,7 @@ function create() {
 
         //  Scale it to fit the width of the game (the original sprite is 400x32 in size)
         ground.scale.setTo(3);
+        ground.smoothed = false;
 
         //  This stops it from falling away when you jump on it
         ground.body.immovable = true;
@@ -171,7 +176,8 @@ function update() {
 
     game.world.setBounds(xBoundLeft,0, xBoundRight+1600, 600);
     bgtile.x = bgtile.x-1;
-    bgtile.width = 0-bgtile.x+xBoundRight;
+    //bgtile.width = 0-bgtile.x+xBoundRight;
+    bgtile.width = xBoundRight;
     skytile.width = xBoundRight;
 
     //  Collide the player and the jellies with the platforms
@@ -240,7 +246,9 @@ function updatePuffers() {
             game.physics.arcade.overlap(puffer, jellies, destroyJelly, null, this);
             puffer.frame = 0;
             var target = findNearest(puffer,jellies);
-            game.physics.arcade.moveToObject(puffer, target, 100);
+            if (target) {
+                game.physics.arcade.moveToObject(puffer, target, 100);
+            }
         }
     });
 }
