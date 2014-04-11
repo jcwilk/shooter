@@ -101,7 +101,7 @@ function create() {
     player.body.collideWorldBounds = true;
 
     //  Our two animations, walking left and right.
-    player.animations.add('right', [0, 1, 2], 10, true);
+    player.animations.add('right', [0, 1, 0, 2], 10, true);
     var mad = player.animations.add('mad', [3,4,3,4], 8, false);
     mad.onComplete.add(function(){isMad = false;},this);
     player.frame = 0;
