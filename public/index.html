@@ -18,8 +18,9 @@ var game = new Phaser.Game(800, 600, Phaser.AUTO, '', { preload: preload, create
 
 function preload() {
 
-    game.load.image('bgtile', 'images/bgtile.png');
-    game.load.image('ground', 'images/platform.png');
+    game.load.image('water', 'images/bgtile.png');
+    game.load.image('ground', 'images/ground.png');
+    game.load.image('sky', 'images/sky_tile.png');
     game.load.spritesheet('jellysmall', 'images/jellyfish_small.png', 7, 9);
     game.load.spritesheet('jellymed', 'images/jellyfish_medium.png', 9, 12);
     game.load.spritesheet('jellybig', 'images/jellyfish_big.png', 12, 16);
@@ -32,9 +33,11 @@ var player;
 var platforms;
 var cursors;
 var bgtile;
+var skytile;
+var groundtile;
 var puffers;
 
-var stars;
+var jellies;
 var score = 0;
 var scoreText;
 var wasDown = null;
@@ -42,7 +45,7 @@ var wasDown = null;
 var xBoundLeft = 0;
 var xBoundRight = 800;
 
-var nextGroundX = 2400;
+var nextGroundX;
 var nextJellyX = 900;
 var nextPufferX = xBoundRight+200;
 
@@ -54,8 +57,17 @@ function create() {
     game.world.setBounds(0,0, 1600, 600);
 
     //  A simple background for our game
-    bgtile = game.add.tileSprite(0, 0, 600, 200, 'bgtile'); //divided by 3
+    bgtile = game.add.tileSprite(0, 0, 600, 200, 'water'); //divided by 3
     bgtile.scale.setTo(3);
+
+    skytile = game.add.tileSprite(0, 0, 600, 20, 'sky'); //divided by 3
+    skytile.scale.setTo(3);
+
+    // groundtile = game.add.tileSprite(0, 540, 600, 20, 'ground'); //divided by 3
+    // groundtile.scale.setTo(3);
+    // game.physics.enable(groundtile, Phaser.Physics.ARCADE);
+    // groundtile.body.immovable = true;
+
 
     //  The platforms group contains the ground and the 2 ledges we can jump on
     platforms = game.add.group();
@@ -65,14 +77,15 @@ function create() {
 
     // Here we create the grounds.
     var ground;
-    for (var i = 0; i < 3; i++) {
-        ground = platforms.create(i*800, game.world.height - 32, 'ground');
+    for (var i = 0; i < 15; i++) {
+        ground = platforms.create(i*60, game.world.height - 60, 'ground');
 
         //  Scale it to fit the width of the game (the original sprite is 400x32 in size)
-        ground.scale.setTo(2, 1);
+        ground.scale.setTo(3);
 
         //  This stops it from falling away when you jump on it
         ground.body.immovable = true;
+        nextGroundX = (i+1)*60;
     }
 
     // The player and its settings
@@ -104,36 +117,36 @@ function create() {
     puffer.scale.set(3);
     puffer.smoothed = false;
 
-    //  Finally some stars to collect
-    stars = game.add.group();
+    //  Finally some jellies to collect
+    jellies = game.add.group();
 
-    //  We will enable physics for any star that is created in this group
-    stars.enableBody = true;
+    //  We will enable physics for any jelly that is created in this group
+    jellies.enableBody = true;
 
     //  Here we'll create 12 of them evenly spaced apart
     for (var i = 0; i < 12; i++)
     {
-        var star;
+        var jelly;
         if (i%3 == 0) {
-            star = stars.create(i * 70, 0, 'jellysmall');
-            star.animations.add('swim', [0, 1, 2], 10, true);
+            jelly = jellies.create(i * 70, 0, 'jellysmall');
+            jelly.animations.add('swim', [0, 1, 2], 10, true);
         } else if (i%3 == 1) {
-            star = stars.create(i * 70, 0, 'jellymed');
-            star.animations.add('swim', [0, 1, 2, 3, 4], 10, true);
+            jelly = jellies.create(i * 70, 0, 'jellymed');
+            jelly.animations.add('swim', [0, 1, 2, 3, 4], 10, true);
         } else {
-            star = stars.create(i * 70, 0, 'jellybig');
-            star.animations.add('swim', [0, 1, 2, 3, 4], 10, true);
+            jelly = jellies.create(i * 70, 0, 'jellybig');
+            jelly.animations.add('swim', [0, 1, 2, 3, 4], 10, true);
         }
 
-        star.scale.set(3);
-        star.smoothed = false;
-        star.animations.play('swim');
+        jelly.scale.set(3);
+        jelly.smoothed = false;
+        jelly.animations.play('swim');
 
         //  Let gravity do its thing
-        star.body.gravity.y = 300;
+        jelly.body.gravity.y = 300;
 
-        //  This just gives each star a slightly random bounce value
-        star.body.bounce.y = 0.7 + Math.random() * 0.2;
+        //  This just gives each jelly a slightly random bounce value
+        jelly.body.bounce.y = 0.7 + Math.random() * 0.2;
     }
 
     //  The score
@@ -158,13 +171,14 @@ function update() {
 
     game.world.setBounds(xBoundLeft,0, xBoundRight+1600, 600);
     bgtile.width = xBoundRight;
+    skytile.width = xBoundRight;
 
-    //  Collide the player and the stars with the platforms
+    //  Collide the player and the jellies with the platforms
     game.physics.arcade.collide(player, platforms);
-    game.physics.arcade.collide(stars, platforms);
+    game.physics.arcade.collide(jellies, platforms);
 
-    //  Checks to see if the player overlaps with any of the stars, if he does call the collectStar function
-    game.physics.arcade.overlap(player, stars, collectStar, null, this);
+    //  Checks to see if the player overlaps with any of the jellies, if he does call the collectStar function
+    game.physics.arcade.overlap(player, jellies, collectStar, null, this);
 
     if (player.body.velocity.x > 0) {
         player.body.velocity.x-= 1;
@@ -197,14 +211,10 @@ function update() {
                 player.animations.stop();
             }
         }
-        //player.animations.stop();
-        //player.frame = 0;
     }
 }
 
 function updatePuffers() {
-
-
     puffers.forEachAlive(function(puffer){
         if(puffer.x < xBoundLeft-50) {
             console.log('killin');
@@ -226,9 +236,9 @@ function updatePuffers() {
             puffer.body.velocity.x = 0;
             puffer.body.velocity.y = 0;
         } else {
-            game.physics.arcade.overlap(puffer, stars, destroyJelly, null, this);
+            game.physics.arcade.overlap(puffer, jellies, destroyJelly, null, this);
             puffer.frame = 0;
-            var target = findNearest(puffer,stars);
+            var target = findNearest(puffer,jellies);
             game.physics.arcade.moveToObject(puffer, target, 100);
         }
     });
@@ -236,13 +246,13 @@ function updatePuffers() {
 
 function updateJellyfish() {
     var jelly;
-    stars.forEachAlive(function(jelly){
+    jellies.forEachAlive(function(jelly){
         if(jelly.x < xBoundLeft-50) {
             jelly.kill();
         }
     });
     if(nextJellyX < xBoundRight+100) {
-        jelly = stars.getFirstDead();
+        jelly = jellies.getFirstDead();
         if(jelly){
             jelly.reset(xBoundRight+50,0);
             nextJellyX = xBoundRight+200;
@@ -253,10 +263,11 @@ function updateJellyfish() {
 
 function updatePlatforms() {
     platforms.forEach(function(platform){
-        if (platform.x < xBoundLeft-800){
+        if (platform.x < xBoundLeft-60){
+            console.log('new!');
             platform.kill();
-            platform.reset(nextGroundX, game.world.height - 32);
-            nextGroundX+=800;
+            platform.reset(nextGroundX, game.world.height - 60);
+            nextGroundX+=60;
         }
     });
 }
@@ -282,10 +293,10 @@ function findNearest(reference,group) {
   return nearest;
 }
 
-function collectStar (player, star) {
+function collectStar (player, jelly) {
 
-    // Removes the star from the screen
-    star.kill();
+    // Removes the jelly from the screen
+    jelly.kill();
 
     //  Add and update the score
     score += 10;
