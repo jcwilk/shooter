@@ -27,6 +27,8 @@ function preload() {
     game.load.spritesheet('jellymed', 'images/jellyfish_medium.png', 9, 12);
     game.load.spritesheet('jellybig', 'images/jellyfish_big.png', 12, 16);
     game.load.spritesheet('puffer', 'images/puffer.png', 16, 14);
+    game.load.spritesheet('angler', 'images/angler.png', 16, 16);
+    game.load.spritesheet('stingray', 'images/stingray.png', 16, 6);
     game.load.spritesheet('dude', 'images/octopus.png', 15, 13);
 
 }
@@ -38,6 +40,8 @@ var bgtile;
 var skytile;
 var groundtile;
 var puffers;
+var anglers;
+var stingrays;
 
 var jellies;
 var score = 0;
@@ -108,18 +112,35 @@ function create() {
 
     puffers = game.add.group();
     puffers.enableBody = true;
-    var puffer = puffers.create(xBoundRight-50, game.world.height - 200, 'puffer');
+    var puffer;
+    for (var i = 0; i < 2; i++) {
+        puffer = puffers.create(xBoundRight-100*i-50, game.world.height - 200, 'puffer');
+        puffer.scale.set(3);
+        puffer.smoothed = false;
+    }
 
-    puffer.scale.set(3);
-    //puffer.anchor.setTo(0.5,0.5);
-    puffer.smoothed = false;
+    anglers = game.add.group();
+    anglers.enableBody = true;
+    var angler;
+    for (var i = 0; i < 2; i++) {
+        angler = anglers.create(xBoundRight-100*i-50, game.world.height - 400, 'angler');
+        angler.scale.set(3);
+        angler.smoothed = false;
+        angler.animations.add('cruising', [0,1], 4, true);
+        angler.animations.add('scared', [2,3], 4, true);
+        angler.animations.play('cruising');
+    }
 
-
-    puffer = puffers.create(xBoundRight-200, game.world.height - 200, 'puffer');
-
-    puffer.scale.set(3);
-    //puffer.anchor.setTo(0.5,0.5);
-    puffer.smoothed = false;
+    stingrays = game.add.group();
+    stingrays.enableBody = true;
+    var stingray;
+    for (var i = 0; i < 2; i++) {
+        stingray = stingrays.create(xBoundRight-100*i-50, game.world.height - 100, 'stingray');
+        stingray.scale.set(3);
+        stingray.smoothed = false;
+        stingray.animations.add('cruising', [0,1,0,2], 8, true);
+        stingray.animations.play('cruising');
+    }
 
     //  Finally some jellies to collect
     jellies = game.add.group();
@@ -168,7 +189,23 @@ function update() {
     game.camera.focusOn(player);
     updatePlatforms();
     updateJellyfish();
-    updatePuffers();
+    updatePredators(puffers,jellies,function(predator){
+        predator.frame = 1;
+        predator.body.velocity.x = 0;
+        predator.body.velocity.y = 0;
+    }, function(predator){
+        predator.frame = 0;
+    }, 100);
+    updatePredators(anglers,puffers,function(predator){
+        predator.play('scared');
+        predator.body.velocity.x = 0;
+        predator.body.velocity.y = 0;
+    }, function(predator){
+        predator.play('cruising');
+    }, 100);
+    updatePredators(stingrays,anglers,function(predator){
+    }, function(predator){
+    }, 200);
 
     if (xBoundLeft < player.x-400) { xBoundLeft = player.x-400; }
     if (xBoundRight < player.x+400) { xBoundRight = player.x+400; }
@@ -220,36 +257,34 @@ function update() {
     }
 }
 
-function updatePuffers() {
-    puffers.forEachAlive(function(puffer){
-        if(puffer.x < xBoundLeft-50) {
+function updatePredators(predators, preys, closeToPlayer, awayFromPlayer, speed) {
+    predators.forEachAlive(function(predator){
+        if(predator.x < xBoundLeft-50) {
             console.log('killin');
-            puffer.kill();
+            predator.kill();
         }
     });
     if (nextPufferX < xBoundRight+50) {
-        var deadPuffer = puffers.getFirstDead();
+        var deadPuffer = predators.getFirstDead();
         if(deadPuffer) {
             console.log('new!');
             deadPuffer.reset(xBoundRight-50, game.world.height - 200);
             deadPuffer.frame = 0;
-            nextPufferX = xBoundRight+200;
+            nextPufferX = xBoundRight+100;
         }
     }
-    puffers.forEachAlive(function(puffer){
-        if(findRectilinearDistance(player,puffer) < 200) {
-            puffer.frame = 1;
-            puffer.body.velocity.x = 0;
-            puffer.body.velocity.y = 0;
+    predators.forEachAlive(function(predator){
+        if(findRectilinearDistance(player,predator) < 200) {
+            closeToPlayer(predator);
         } else {
-            game.physics.arcade.overlap(puffer, jellies, destroyJelly, null, this);
-            puffer.frame = 0;
-            var target = findNearest(puffer,jellies,function(jelly) { return(jelly.x < puffer.x) });
+            awayFromPlayer(predator);
+            game.physics.arcade.overlap(predator, preys, destroyJelly, null, this);
+            var target = findNearest(predator,preys,function(prey) { return(prey.x < predator.x) });
             if (target) {
-                game.physics.arcade.moveToObject(puffer, target, 100);
+                game.physics.arcade.moveToObject(predator, target, speed);
             } else {
-                puffer.body.velocity.x = -100;
-                puffer.body.velocity.y = 0;
+                predator.body.velocity.x = 0 - speed;
+                predator.body.velocity.y = 0;
             }
         }
     });
