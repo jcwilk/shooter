@@ -26,9 +26,9 @@ function preload() {
     game.load.spritesheet('jellysmall', 'images/jellyfish_small.png', 7, 9);
     game.load.spritesheet('jellymed', 'images/jellyfish_medium.png', 9, 12);
     game.load.spritesheet('jellybig', 'images/jellyfish_big.png', 12, 16);
-    game.load.spritesheet('puffer', 'images/puffer.png', 16, 14);
-    game.load.spritesheet('angler', 'images/angler.png', 16, 16);
-    game.load.spritesheet('stingray', 'images/stingray.png', 16, 6);
+    game.load.spritesheet('puffers', 'images/puffer.png', 16, 14);
+    game.load.spritesheet('anglers', 'images/angler.png', 16, 16);
+    game.load.spritesheet('stingrays', 'images/stingray.png', 16, 6);
     game.load.spritesheet('dude', 'images/octopus.png', 15, 13);
 
 }
@@ -39,11 +39,9 @@ var cursors;
 var bgtile;
 var skytile;
 var groundtile;
-var puffers;
-var anglers;
-var stingrays;
 
-var jellies;
+var puffers;
+
 var score = 0;
 var scoreText;
 var wasDown = null;
@@ -53,7 +51,137 @@ var xBoundRight = 800;
 
 var nextGroundX;
 var nextJellyX = 900;
-var nextPufferX = xBoundRight+200;
+
+
+/*
+
+* indicates mandatory
+
+specs: {
+    *spritesheet: 'some sheet definition', //may also be a function
+    onPlayerApproach: function(member){ stuff to do to the member },
+    onPlayerAway: function(member){ stuff to do to the member },
+    *onAnimationSetup: function(member){ stuff around animations and initial visual state },
+    prey: 'label of prey if any',
+    *speed: 125, //pixels per second i suppose? only required if there are prey
+    label: 'some identifier', //defaults to spritesheet which must not be a function if so
+    count: 10 //defaults to 2
+}
+*/
+var speciesManager = (function(){
+    var allSpecies = [];
+    var nextSpawnX = xBoundRight+200;
+
+    var findSpeciesByLabel = function(label){
+        for(var i=0; i<allSpecies.length; i++){
+            if (allSpecies[i].label == label) {
+                return(allSpecies[i]);
+            }
+        }
+    }
+
+    var destroyPrey = function(_, prey) {
+        prey.kill();
+    }
+
+    var killOutOfRange = function(member){
+        if(member.x < xBoundLeft-50) {
+            member.kill();
+        }
+    }
+
+    var spawnSpeciesIfDue = function(group){
+        if (nextSpawnX < xBoundRight+50) {
+            var dead = group.getFirstDead();
+            if(dead) {
+                dead.reset(xBoundRight-50, game.world.height - 100 - 400*Math.random());
+                dead.frame = 0;
+                nextSpawnX = xBoundRight+100;
+            }
+        }
+    }
+
+    var pursuePrey = function(predator, preys, speed) {
+        game.physics.arcade.overlap(predator, preys, destroyPrey, null, this);
+        var target = findNearest(predator,preys,function(prey) { return(prey.x < predator.x) });
+        if (target) {
+            game.physics.arcade.moveToObject(predator, target, speed);
+        } else {
+            predator.body.velocity.x = 0 - speed;
+            predator.body.velocity.y = 0;
+        }
+    }
+
+    var bounceAbout = function(member){
+        if(member.body.velocity.y > 0 && member.y > 450){
+            member.body.velocity.y = -300 - 100*Math.random();
+            if(Math.random() >= 0.5){
+                member.body.velocity.x = -60;
+            } else {
+                member.body.velocity.x = 10;
+            }
+        }
+    }
+
+    return ({
+        createSpecies: function(specs) {
+            var newSpecies = {
+                spritesheet: specs.spritesheet,
+                onPlayerApproach: specs.onPlayerApproach || function(){},
+                onPlayerAway: specs.onPlayerAway || function(){},
+                onAnimationSetup: specs.onAnimationSetup,
+                group: game.add.group(),
+                label: specs.label || specs.spritesheet,
+                prey: specs.prey,
+                speed: specs.speed,
+                count: specs.count || 2,
+                reactToPlayer: function(member){
+                    if(findRectilinearDistance(player,member) < 200) {
+                        newSpecies.onPlayerApproach(member);
+                    } else {
+                        newSpecies.onPlayerAway(member);
+                    }
+                }
+            }
+            allSpecies.push(newSpecies);
+            newSpecies.group.enableBody = true;
+            var member,spritesheet;
+            for (var i = 0; i < newSpecies.count; i++) {
+                if(typeof(newSpecies.spritesheet) == "function"){
+                    spritesheet = newSpecies.spritesheet();
+                } else {
+                    spritesheet = newSpecies.spritesheet;
+                }
+                console.log(spritesheet);
+                member = newSpecies.group.create(xBoundRight-100*i-50, game.world.height - 100 - 400*Math.random(), spritesheet);
+                member.scale.set(3);
+                member.smoothed = false;
+                newSpecies.onAnimationSetup(member, spritesheet);
+            }
+            return (newSpecies.group);
+        },
+        updateAllSpecies: function() {
+            var species, prey;
+            for(var i = 0; i < allSpecies.length; i++) {
+                species = allSpecies[i];
+                prey = findSpeciesByLabel(species.prey);
+
+                species.group.forEachAlive(killOutOfRange);
+                spawnSpeciesIfDue(species.group);
+
+                species.group.forEachAlive(function(member){
+                    species.reactToPlayer(member);
+
+                    if(prey){
+                        pursuePrey(member, prey.group, species.speed);
+                    } else {
+                        bounceAbout(member);
+                    }
+                });
+            }
+        }
+    })
+})();
 
 function create() {
 
@@ -110,69 +238,80 @@ function create() {
     mad.onComplete.add(function(){isMad = false;},this);
     player.frame = 0;
 
-    puffers = game.add.group();
-    puffers.enableBody = true;
-    var puffer;
-    for (var i = 0; i < 2; i++) {
-        puffer = puffers.create(xBoundRight-100*i-50, game.world.height - 200, 'puffer');
-        puffer.scale.set(3);
-        puffer.smoothed = false;
-    }
+    puffers = speciesManager.createSpecies({
+        spritesheet: 'puffers',
+        onAnimationSetup: function(m){
+            m.frame = 0;
+        },
+        onPlayerApproach: function(m){
+            m.frame = 1;
+            m.body.velocity.x = 0;
+            m.body.velocity.y = 0;
+        },
+        onPlayerAway: function(m){
+            m.frame = 0;
+        },
+        prey: 'jellies',
+        speed: 100,
+    });
 
-    anglers = game.add.group();
-    anglers.enableBody = true;
-    var angler;
-    for (var i = 0; i < 2; i++) {
-        angler = anglers.create(xBoundRight-100*i-50, game.world.height - 400, 'angler');
-        angler.scale.set(3);
-        angler.smoothed = false;
-        angler.animations.add('cruising', [0,1], 4, true);
-        angler.animations.add('scared', [2,3], 4, true);
-        angler.animations.play('cruising');
-    }
+    speciesManager.createSpecies({
+        spritesheet: 'anglers',
+        onAnimationSetup: function(m){
+            m.animations.add('cruising', [0,1], 4, true);
+            m.animations.add('scared', [2,3], 4, true);
+            m.animations.play('cruising');
+        },
+        onPlayerApproach: function(m){
+            m.play('scared');
+            m.body.velocity.x = 0;
+            m.body.velocity.y = 0;
+        },
+        onPlayerAway: function(m){
+            m.play('cruising');
+        },
+        speed: 100,
+        prey: 'puffers'
+    });
 
-    stingrays = game.add.group();
-    stingrays.enableBody = true;
-    var stingray;
-    for (var i = 0; i < 2; i++) {
-        stingray = stingrays.create(xBoundRight-100*i-50, game.world.height - 100, 'stingray');
-        stingray.scale.set(3);
-        stingray.smoothed = false;
-        stingray.animations.add('cruising', [0,1,0,2], 8, true);
-        stingray.animations.play('cruising');
-    }
+    speciesManager.createSpecies({
+        spritesheet: 'stingrays',
+        onAnimationSetup: function(m){
+            m.animations.add('cruising', [0,1,0,2], 8, true);
+            m.animations.play('cruising');
+        },
+        speed: 200,
+        prey: 'anglers'
+    });
 
-    //  Finally some jellies to collect
-    jellies = game.add.group();
+    speciesManager.createSpecies({
+        label: 'jellies',
+        count: 10,
+        spritesheet: function(){
+            var picker = Math.random()*3;
+            if (picker < 1) {
+                return('jellysmall');
+            } else if(picker < 2) {
+                return('jellymed');
+            } else {
+                return('jellybig');
+            }
+        },
+        onAnimationSetup: function(m,spritesheet){
+            if(spritesheet == 'jellysmall') {
+                m.animations.add('swim', [0, 1, 2], 10, true);
+            } else {
+                m.animations.add('swim', [0, 1, 2, 3, 4], 10, true);
+            }
+            console.log('huh?');
+            //m.animations.play('swim');
 
-    //  We will enable physics for any jelly that is created in this group
-    jellies.enableBody = true;
-
-    //  Here we'll create 12 of them evenly spaced apart
-    for (var i = 0; i < 12; i++)
-    {
-        var jelly;
-        if (i%3 == 0) {
-            jelly = jellies.create(i * 70, 0, 'jellysmall');
-            jelly.animations.add('swim', [0, 1, 2], 10, true);
-        } else if (i%3 == 1) {
-            jelly = jellies.create(i * 70, 0, 'jellymed');
-            jelly.animations.add('swim', [0, 1, 2, 3, 4], 10, true);
-        } else {
-            jelly = jellies.create(i * 70, 0, 'jellybig');
-            jelly.animations.add('swim', [0, 1, 2, 3, 4], 10, true);
+            m.body.gravity.y = 300;
+        },
+        onPlayerApproach: function(m){
+            game.physics.arcade.overlap(player, m, collectJelly, null, this);
         }
-
-        jelly.scale.set(3);
-        jelly.smoothed = false;
-        jelly.animations.play('swim');
-
-        //  Let gravity do its thing
-        jelly.body.gravity.y = 300;
-
-        //  This just gives each jelly a slightly random bounce value
-        jelly.body.bounce.y = 0.7 + Math.random() * 0.2;
-    }
+    })
 
     //  The score
     scoreText = game.add.text(16, 16, 'score: 0', { fontSize: '32px', fill: '#000' });
@@ -180,7 +319,6 @@ function create() {
 
     //  Our controls.
     cursors = game.input.keyboard.createCursorKeys();
-
 }
 
 var isMad = false;
@@ -188,24 +326,7 @@ var isMad = false;
 function update() {
     game.camera.focusOn(player);
     updatePlatforms();
-    updateJellyfish();
-    updatePredators(puffers,jellies,function(predator){
-        predator.frame = 1;
-        predator.body.velocity.x = 0;
-        predator.body.velocity.y = 0;
-    }, function(predator){
-        predator.frame = 0;
-    }, 100);
-    updatePredators(anglers,puffers,function(predator){
-        predator.play('scared');
-        predator.body.velocity.x = 0;
-        predator.body.velocity.y = 0;
-    }, function(predator){
-        predator.play('cruising');
-    }, 100);
-    updatePredators(stingrays,anglers,function(predator){
-    }, function(predator){
-    }, 200);
+    speciesManager.updateAllSpecies();
 
     if (xBoundLeft < player.x-400) { xBoundLeft = player.x-400; }
     if (xBoundRight < player.x+400) { xBoundRight = player.x+400; }
@@ -215,12 +336,7 @@ function update() {
     skytile.width = xBoundRight;
     wavetile.width = xBoundRight;
 
-    //  Collide the player and the jellies with the platforms
     game.physics.arcade.collide(player, platforms);
-    game.physics.arcade.collide(jellies, platforms);
-
-    //  Checks to see if the player overlaps with any of the jellies, if he does call the collectStar function
-    game.physics.arcade.overlap(player, jellies, collectStar, null, this);
 
     if (player.body.velocity.x > 0) {
         player.body.velocity.x-= 1;
@@ -236,7 +352,6 @@ function update() {
         }
     } else {
         if(wasDown+500 > game.time.now) {
-            console.log('quick!');
             wasDown = null;
             var killed = false;
             game.physics.arcade.overlap(player, puffers, function(_,puffer){
@@ -257,60 +372,9 @@ function update() {
     }
 }
 
-function updatePredators(predators, preys, closeToPlayer, awayFromPlayer, speed) {
-    predators.forEachAlive(function(predator){
-        if(predator.x < xBoundLeft-50) {
-            console.log('killin');
-            predator.kill();
-        }
-    });
-    if (nextPufferX < xBoundRight+50) {
-        var deadPuffer = predators.getFirstDead();
-        if(deadPuffer) {
-            console.log('new!');
-            deadPuffer.reset(xBoundRight-50, game.world.height - 200);
-            deadPuffer.frame = 0;
-            nextPufferX = xBoundRight+100;
-        }
-    }
-    predators.forEachAlive(function(predator){
-        if(findRectilinearDistance(player,predator) < 200) {
-            closeToPlayer(predator);
-        } else {
-            awayFromPlayer(predator);
-            game.physics.arcade.overlap(predator, preys, destroyJelly, null, this);
-            var target = findNearest(predator,preys,function(prey) { return(prey.x < predator.x) });
-            if (target) {
-                game.physics.arcade.moveToObject(predator, target, speed);
-            } else {
-                predator.body.velocity.x = 0 - speed;
-                predator.body.velocity.y = 0;
-            }
-        }
-    });
-}
-
-function updateJellyfish() {
-    var jelly;
-    jellies.forEachAlive(function(jelly){
-        if(jelly.x < xBoundLeft-50) {
-            jelly.kill();
-        }
-    });
-    if(nextJellyX < xBoundRight+100) {
-        jelly = jellies.getFirstDead();
-        if(jelly){
-            jelly.reset(xBoundRight+50,0);
-            nextJellyX = xBoundRight+200;
-        }
-    }
-
-}
-
 function updatePlatforms() {
     platforms.forEach(function(platform){
         if (platform.x < xBoundLeft-60){
-            console.log('new!');
             platform.kill();
             platform.reset(nextGroundX, game.world.height - 60);
             nextGroundX+=60;
@@ -342,7 +406,7 @@ function findNearest(reference,group,filter) {
   return nearest;
 }
 
-function collectStar (player, jelly) {
+function collectJelly (player, jelly) {
 
     // Removes the jelly from the screen
     jelly.kill();
@@ -353,9 +417,7 @@ function collectStar (player, jelly) {
 
 }
 
-function destroyJelly (_, jelly) {
-    jelly.kill();
-}
+
 
 </script>
 
