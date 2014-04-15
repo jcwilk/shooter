@@ -61,7 +61,7 @@ specs: {
     *spritesheet: 'some sheet definition', //may also be a function
     onPlayerApproach: function(member){ stuff to do to the member },
     onPlayerAway: function(member){ stuff to do to the member },
-    *onAnimationSetup: function(member){ stuff around animations and initial visual state },
+    onAnimationSetup: function(member){ stuff around animations and initial visual state },
     prey: 'label of prey if any',
     *speed: 125, //pixels per second i suppose? only required if there are prey
     label: 'some identifier', //defaults to spritesheet which must not be a function if so
@@ -129,7 +129,7 @@ var speciesManager = (function(){
                 spritesheet: specs.spritesheet,
                 onPlayerApproach: specs.onPlayerApproach || function(){},
                 onPlayerAway: specs.onPlayerAway || function(){},
-                onAnimationSetup: specs.onAnimationSetup,
+                onAnimationSetup: specs.onAnimationSetup || function(){},
                 group: game.add.group(),
                 label: specs.label || specs.spritesheet,
                 prey: specs.prey,
@@ -240,13 +240,8 @@ function create() {
 
     puffers = speciesManager.createSpecies({
         spritesheet: 'puffers',
-        onAnimationSetup: function(m){
-            m.frame = 0;
-        },
         onPlayerApproach: function(m){
             m.frame = 1;
-            m.body.velocity.x = 0;
-            m.body.velocity.y = 0;
         },
         onPlayerAway: function(m){
             m.frame = 0;
@@ -264,8 +259,6 @@ function create() {
         },
         onPlayerApproach: function(m){
             m.play('scared');
-            m.body.velocity.x = 0;
-            m.body.velocity.y = 0;
         },
         onPlayerAway: function(m){
             m.play('cruising');
@@ -340,6 +333,9 @@ function update() {
 
     if (player.body.velocity.x > 0) {
         player.body.velocity.x-= 1;
+    }
+    if (player.body.velocity.y > 200) {
+        player.body.velocity.y = 200;
     }
 
     if (game.input.activePointer.isDown) {
