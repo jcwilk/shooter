@@ -113,12 +113,12 @@ var speciesManager = (function(){
     }
 
     var bounceAbout = function(member){
-        if(member.body.velocity.y > 0 && member.y > 450){
-            member.body.velocity.y = -300 - 100*Math.random();
+        if(member.body.velocity.y > 0 && member.y > 400){
+            member.body.velocity.y = -150 - 50*Math.random();
             if(Math.random() >= 0.5){
-                member.body.velocity.x = -60;
+                member.body.velocity.x = -80;
             } else {
-                member.body.velocity.x = 10;
+                member.body.velocity.x = -30;
             }
         }
     }
@@ -306,7 +306,7 @@ function create() {
             console.log('huh?');
             //m.animations.play('swim');
 
-            m.body.gravity.y = 300;
+            m.body.gravity.y = 150;
         },
         onPlayerApproach: function(m){
             game.physics.arcade.overlap(player, m, collectJelly, null, this);
