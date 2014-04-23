@@ -18,19 +18,17 @@ var game = new Phaser.Game(800, 600, Phaser.AUTO, '', { preload: preload, create
 
 
 function preload() {
-
     game.load.image('water', 'images/water_big.png');
     game.load.image('ground', 'images/ground.png');
     game.load.image('waves', 'images/waves.png');
     game.load.image('sky', 'images/sky_big.png');
-    game.load.spritesheet('jellysmall', 'images/jellyfish_small.png', 7, 9);
-    game.load.spritesheet('jellymed', 'images/jellyfish_medium.png', 9, 12);
-    game.load.spritesheet('jellybig', 'images/jellyfish_big.png', 12, 16);
-    game.load.spritesheet('puffers', 'images/puffer.png', 16, 14);
-    game.load.spritesheet('anglers', 'images/angler.png', 16, 16);
-    game.load.spritesheet('stingrays', 'images/stingray.png', 16, 6);
-    game.load.spritesheet('dude', 'images/octopus.png', 15, 13);
-
+    game.load.spritesheet('jellysmall', 'images/jellyfish_small1.png', 8, 9);
+    game.load.spritesheet('jellymed', 'images/jellyfish_medium1.png', 10, 12);
+    game.load.spritesheet('jellybig', 'images/jellyfish_big1.png', 13, 16);
+    game.load.spritesheet('puffers', 'images/puffer1.png', 17, 14);
+    game.load.spritesheet('anglers', 'images/angler1.png', 17, 16);
+    game.load.spritesheet('stingrays', 'images/stingray1.png', 17, 6);
+    game.load.spritesheet('dude', 'images/octopus1.png', 16, 13);
 }
 
 var player;
@@ -234,7 +232,7 @@ function create() {
 
     //  Our two animations, walking left and right.
     player.animations.add('right', [0, 1, 0, 2], 10, true);
-    var mad = player.animations.add('mad', [3,4,3,4], 8, false);
+    var mad = player.animations.add('mad', [3,4,5,6], 8, false);
     mad.onComplete.add(function(){isMad = false;},this);
     player.frame = 0;
 
@@ -292,7 +290,7 @@ function create() {
         },
         onAnimationSetup: function(m,spritesheet){
             if(spritesheet == 'jellysmall') {
-                m.animations.add('swim', [0, 1, 2], 10, true);
+                m.animations.add(   'swim', [0, 1, 2], 10, true);
             } else {
                 m.animations.add('swim', [0, 1, 2, 3, 4], 10, true);
             }
