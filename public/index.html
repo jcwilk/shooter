@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
     <title>Jellyfisher</title>
-  <script type="text/javascript" src="js/phaser.min.js"></script>
+  <script type="text/javascript" src="js/phaser_2_0_3.min.js"></script>
     <style type="text/css">
         body {
             margin: 0;
@@ -163,19 +163,17 @@ var speciesManager = (function(){
                         emitter.makeParticles(spritesheet);
                         emitter.minRotation = 0;
                         emitter.maxRotation = 0;
-                        emitter.minParticleScale = 3;
-                        emitter.maxParticleScale = 3;
-                        emitter.minParticleSpeed = new Phaser.Point(150,150);
-                        emitter.maxParticleSpeed = new Phaser.Point(-150,-150);
+                        emitter.minParticleSpeed = new Phaser.Point(160,160);
+                        emitter.maxParticleSpeed = new Phaser.Point(-160,-160);
 
-                        // doesn't seem to work :\
-                        // emitter.minParticleAlpha = 0.2;
-                        // emitter.maxParticleAlpha = 0.4;
-                        emitter.alpha = 0.3;
-                        emitter.smoothed = false;
-                        //emitter.gravity = 400;
+                        //hack for scale bug workaround
+                        emitter.setScale(3, 3.0001, 3, 3.0001, 200);
+                        //emitter.smoothed = false;
 
-                        emitter.start(true, 150, null, 10);
+                        emitter.setAlpha(0.8, 0, 600, Phaser.Easing.Bounce.Out);
+                        emitter.gravity = 300;
+
+                        emitter.start(true, 400, null, 16);
                     }, this);
                     newSpecies.onAnimationSetup(member, spritesheet);
 
