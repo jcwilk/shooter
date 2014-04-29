@@ -50,6 +50,7 @@ var xBoundRight = 800;
 var nextGroundX;
 var nextJellyX = 900;
 
+var emitter;
 
 /*
 
@@ -143,18 +144,42 @@ var speciesManager = (function(){
             }
             allSpecies.push(newSpecies);
             newSpecies.group.enableBody = true;
-            var member,spritesheet;
+            var member;
             for (var i = 0; i < newSpecies.count; i++) {
-                if(typeof(newSpecies.spritesheet) == "function"){
-                    spritesheet = newSpecies.spritesheet();
-                } else {
-                    spritesheet = newSpecies.spritesheet;
-                }
-                console.log(spritesheet);
-                member = newSpecies.group.create(xBoundRight-100*i-50, game.world.height - 100 - 400*Math.random(), spritesheet);
-                member.scale.set(3);
-                member.smoothed = false;
-                newSpecies.onAnimationSetup(member, spritesheet);
+
+                (function(){ //closure for spritesheet
+                    var spritesheet;
+
+                    if(typeof(newSpecies.spritesheet) == "function"){
+                        spritesheet = newSpecies.spritesheet();
+                    } else {
+                        spritesheet = newSpecies.spritesheet;
+                    }
+                    member = newSpecies.group.create(xBoundRight-100*i-50, game.world.height - 100 - 400*Math.random(), spritesheet);
+                    member.scale.set(3);
+                    member.smoothed = false;
+                    member.events.onKilled.add(function(m){
+                        emitter = game.add.emitter(m.x,m.y,50);
+                        emitter.makeParticles(spritesheet);
+                        emitter.minRotation = 0;
+                        emitter.maxRotation = 0;
+                        emitter.minParticleScale = 3;
+                        emitter.maxParticleScale = 3;
+                        emitter.minParticleSpeed = new Phaser.Point(150,150);
+                        emitter.maxParticleSpeed = new Phaser.Point(-150,-150);
+
+                        // doesn't seem to work :\
+                        // emitter.minParticleAlpha = 0.2;
+                        // emitter.maxParticleAlpha = 0.4;
+                        emitter.alpha = 0.3;
+                        emitter.smoothed = false;
+                        //emitter.gravity = 400;
+
+                        emitter.start(true, 150, null, 10);
+                    }, this);
+                    newSpecies.onAnimationSetup(member, spritesheet);
+
+                })();
             }
             return (newSpecies.group);
         },
@@ -294,8 +319,6 @@ function create() {
             } else {
                 m.animations.add('swim', [0, 1, 2, 3, 4], 10, true);
             }
-            console.log('huh?');
-            //m.animations.play('swim');
 
             m.body.gravity.y = 150;
         },
