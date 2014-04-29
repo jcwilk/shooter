@@ -48,7 +48,6 @@ var xBoundLeft = 0;
 var xBoundRight = 800;
 
 var nextGroundX;
-var nextJellyX = 900;
 
 var emitter;
 
@@ -64,12 +63,12 @@ specs: {
     prey: 'label of prey if any',
     *speed: 125, //pixels per second i suppose? only required if there are prey
     label: 'some identifier', //defaults to spritesheet which must not be a function if so
-    count: 10 //defaults to 2
+    count: 10, //defaults to 2
+    spawnModifier: 2 //defaults to 1
 }
 */
 var speciesManager = (function(){
     var allSpecies = [];
-    var nextSpawnX = xBoundRight+200;
 
     var findSpeciesByLabel = function(label){
         for(var i=0; i<allSpecies.length; i++){
@@ -79,52 +78,104 @@ var speciesManager = (function(){
         }
     }
 
-    var destroyPrey = function(_, prey) {
-        prey.kill();
-    }
-
-    var killOutOfRange = function(member){
-        if(member.x < xBoundLeft-50) {
-            member.kill();
-        }
-    }
-
-    var spawnSpeciesIfDue = function(group){
-        if (nextSpawnX < xBoundRight+50) {
-            var dead = group.getFirstDead();
-            if(dead) {
-                dead.reset(xBoundRight-50, game.world.height - 100 - 400*Math.random());
-                dead.frame = 0;
-                nextSpawnX = xBoundRight+100;
-            }
-        }
-    }
-
-    var pursuePrey = function(predator, preys, speed) {
-        game.physics.arcade.overlap(predator, preys, destroyPrey, null, this);
-        var target = findNearest(predator,preys,function(prey) { return(prey.x < predator.x) });
-        if (target) {
-            game.physics.arcade.moveToObject(predator, target, speed);
-        } else {
-            predator.body.velocity.x = 0 - speed;
-            predator.body.velocity.y = 0;
-        }
-    }
-
     var bounceAbout = function(member){
         if(member.body.velocity.y > 0 && member.y > 400){
             member.body.velocity.y = -150 - 50*Math.random();
             if(Math.random() >= 0.5){
-                member.body.velocity.x = -80;
+                member.body.velocity.x = -100;
             } else {
-                member.body.velocity.x = -30;
+                member.body.velocity.x = -40;
             }
         }
     }
 
     return ({
         createSpecies: function(specs) {
-            var newSpecies = {
+            var lastSpawnX = xBoundRight;
+            var nextSpawnXDelta = 120;
+            var species;
+
+            var correctSpawn = function(){
+                if(nextSpawnXDelta > 2400) {
+                    nextSpawnXDelta = 2400;
+                } else if(nextSpawnXDelta < 50) {
+                    nextSpawnXDelta = 50;
+                }
+            }
+
+            var applySpawnModifier = function(modifier){
+                nextSpawnXDelta+= modifier;
+                correctSpawn();
+            }
+
+            var applySpawnMultiplier = function(multiplier){
+                nextSpawnXDelta*= multiplier;
+                correctSpawn();
+            }
+
+            var circulateBonus = function(){
+                applySpawnModifier(20);
+            }
+
+            var eatPreyBonus = function(){
+                applySpawnMultiplier(0.5);
+            }
+
+            var killedPenalty = function(){
+                applySpawnModifier(2);
+            }
+
+            var destroyPrey = function(_, prey) {
+                prey.kill();
+                eatPreyBonus();
+            }
+
+            var pursuePrey = function(predator, preys, speed) {
+                game.physics.arcade.overlap(predator, preys, destroyPrey, null, this);
+                var target = findNearest(predator,preys,function(prey) { return(prey.x < predator.x) });
+                if (target) {
+                    game.physics.arcade.moveToObject(predator, target, speed);
+                } else {
+                    predator.body.velocity.x = 0 - speed;
+                    predator.body.velocity.y = 0;
+                }
+            }
+
+            var createMember = function(x,y){
+                var spritesheet;
+
+                if(typeof(species.spritesheet) == "function"){
+                    spritesheet = species.spritesheet();
+                } else {
+                    spritesheet = species.spritesheet;
+                }
+                member = species.group.create(x, y, spritesheet);
+                member.scale.set(3);
+                member.smoothed = false;
+                member.events.onKilled.add(function(m){
+                    killedPenalty();
+
+                    emitter = game.add.emitter(m.x,m.y,50);
+                    emitter.makeParticles(spritesheet);
+                    emitter.minRotation = 0;
+                    emitter.maxRotation = 0;
+                    emitter.minParticleSpeed = new Phaser.Point(160,160);
+                    emitter.maxParticleSpeed = new Phaser.Point(-160,-160);
+
+                    //hack for scale bug workaround
+                    emitter.setScale(3, 3.0001, 3, 3.0001, 200);
+                    //emitter.smoothed = false;
+
+                    emitter.setAlpha(0.8, 0, 600, Phaser.Easing.Bounce.Out);
+                    emitter.gravity = 300;
+
+                    emitter.start(true, 400, null, 16);
+                }, this);
+                species.onAnimationSetup(member, spritesheet);
+
+            }
+
+            species = {
                 spritesheet: specs.spritesheet,
                 onPlayerApproach: specs.onPlayerApproach || function(){},
                 onPlayerAway: specs.onPlayerAway || function(){},
@@ -133,72 +184,64 @@ var speciesManager = (function(){
                 label: specs.label || specs.spritesheet,
                 prey: specs.prey,
                 speed: specs.speed,
-                count: specs.count || 2,
+                count: specs.count || 4,
+                spawnModifier: specs.spawnModifier || 1,
                 reactToPlayer: function(member){
                     if(findRectilinearDistance(player,member) < 200) {
-                        newSpecies.onPlayerApproach(member);
+                        species.onPlayerApproach(member);
                     } else {
-                        newSpecies.onPlayerAway(member);
+                        species.onPlayerAway(member);
                     }
+                },
+                spawnIfDue: function(){
+                    var nextSpawnX = lastSpawnX+nextSpawnXDelta/species.spawnModifier;
+                    var y;
+                    if (nextSpawnX < xBoundRight) {
+                        console.log(species.label+" last: "+lastSpawnX+" current: "+xBoundRight+" diff: "+nextSpawnXDelta);
+                        lastSpawnX = xBoundRight;
+                        y = game.world.height - 100 - 400*Math.random();
+
+                        var dead = species.group.getFirstDead();
+                        if(dead) {
+                            dead.reset(lastSpawnX,y);
+                            dead.frame = 0;
+                        } else {
+                            createMember(lastSpawnX,y);
+                        }
+                    }
+                },
+                update: function(){
+                    var prey = findSpeciesByLabel(species.prey);
+
+                    species.spawnIfDue();
+
+                    species.group.forEachAlive(function(member){
+                        if(member.x < xBoundLeft-50) {
+                            member.kill();
+                            circulateBonus();
+                        } else {
+                            species.reactToPlayer(member);
+
+                            if(prey){
+                                pursuePrey(member, prey.group, species.speed);
+                            } else {
+                                bounceAbout(member);
+                            }
+                        }
+                    });
                 }
             }
-            allSpecies.push(newSpecies);
-            newSpecies.group.enableBody = true;
+            allSpecies.push(species);
+            species.group.enableBody = true;
             var member;
-            for (var i = 0; i < newSpecies.count; i++) {
-
-                (function(){ //closure for spritesheet
-                    var spritesheet;
-
-                    if(typeof(newSpecies.spritesheet) == "function"){
-                        spritesheet = newSpecies.spritesheet();
-                    } else {
-                        spritesheet = newSpecies.spritesheet;
-                    }
-                    member = newSpecies.group.create(xBoundRight-100*i-50, game.world.height - 100 - 400*Math.random(), spritesheet);
-                    member.scale.set(3);
-                    member.smoothed = false;
-                    member.events.onKilled.add(function(m){
-                        emitter = game.add.emitter(m.x,m.y,50);
-                        emitter.makeParticles(spritesheet);
-                        emitter.minRotation = 0;
-                        emitter.maxRotation = 0;
-                        emitter.minParticleSpeed = new Phaser.Point(160,160);
-                        emitter.maxParticleSpeed = new Phaser.Point(-160,-160);
-
-                        //hack for scale bug workaround
-                        emitter.setScale(3, 3.0001, 3, 3.0001, 200);
-                        //emitter.smoothed = false;
-
-                        emitter.setAlpha(0.8, 0, 600, Phaser.Easing.Bounce.Out);
-                        emitter.gravity = 300;
-
-                        emitter.start(true, 400, null, 16);
-                    }, this);
-                    newSpecies.onAnimationSetup(member, spritesheet);
-
-                })();
+            for (var i = 0; i < species.count; i++) {
+                createMember(xBoundRight-100*i-50, game.world.height - 100 - 400*Math.random());
             }
-            return (newSpecies.group);
+            return (species.group);
         },
         updateAllSpecies: function() {
-            var species, prey;
             for(var i = 0; i < allSpecies.length; i++) {
-                species = allSpecies[i];
-                prey = findSpeciesByLabel(species.prey);
-
-                species.group.forEachAlive(killOutOfRange);
-                spawnSpeciesIfDue(species.group);
-
-                species.group.forEachAlive(function(member){
-                    species.reactToPlayer(member);
-
-                    if(prey){
-                        pursuePrey(member, prey.group, species.speed);
-                    } else {
-                        bounceAbout(member);
-                    }
-                });
+                allSpecies[i].update();
             }
         }
     })
@@ -261,6 +304,8 @@ function create() {
 
     puffers = speciesManager.createSpecies({
         spritesheet: 'puffers',
+        count: 4,
+        speed: 100,
         onPlayerApproach: function(m){
             m.frame = 1;
         },
@@ -268,11 +313,12 @@ function create() {
             m.frame = 0;
         },
         prey: 'jellies',
-        speed: 100,
     });
 
     speciesManager.createSpecies({
         spritesheet: 'anglers',
+        count: 1,
+        speed: 120,
         onAnimationSetup: function(m){
             m.animations.add('cruising', [0,1], 4, true);
             m.animations.add('scared', [2,3], 4, true);
@@ -284,23 +330,25 @@ function create() {
         onPlayerAway: function(m){
             m.play('cruising');
         },
-        speed: 100,
         prey: 'puffers'
     });
 
     speciesManager.createSpecies({
         spritesheet: 'stingrays',
+        count: 1,
+        speed: 140,
+        spawnModifier: 0.5,
         onAnimationSetup: function(m){
             m.animations.add('cruising', [0,1,0,2], 8, true);
             m.animations.play('cruising');
         },
-        speed: 200,
         prey: 'anglers'
     });
 
     speciesManager.createSpecies({
         label: 'jellies',
-        count: 10,
+        count: 6,
+        spawnModifier: 3,
         spritesheet: function(){
             var picker = Math.random()*3;
             if (picker < 1) {
@@ -351,14 +399,14 @@ function update() {
     game.physics.arcade.collide(player, platforms);
 
     if (player.body.velocity.x > 0) {
-        player.body.velocity.x-= 1;
+        player.body.velocity.x-= 3;
     }
     if (player.body.velocity.y > 200) {
         player.body.velocity.y = 200;
     }
 
     if (game.input.activePointer.isDown) {
-        player.body.velocity.x = 150;
+        player.body.velocity.x = 220;
         player.body.velocity.y = -250;
 
         player.animations.play('right');
