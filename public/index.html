@@ -114,7 +114,7 @@ var speciesManager = (function(){
             }
 
             var circulateBonus = function(){
-                applySpawnModifier(20);
+                applySpawnModifier(-20);
             }
 
             var eatPreyBonus = function(){
@@ -122,7 +122,7 @@ var speciesManager = (function(){
             }
 
             var killedPenalty = function(){
-                applySpawnModifier(2);
+                applySpawnMultiplier(1.2);
             }
 
             var destroyPrey = function(_, prey) {
@@ -318,7 +318,7 @@ function create() {
     speciesManager.createSpecies({
         spritesheet: 'anglers',
         count: 1,
-        speed: 120,
+        speed: 115,
         onAnimationSetup: function(m){
             m.animations.add('cruising', [0,1], 4, true);
             m.animations.add('scared', [2,3], 4, true);
@@ -348,7 +348,7 @@ function create() {
     speciesManager.createSpecies({
         label: 'jellies',
         count: 6,
-        spawnModifier: 3,
+        spawnModifier: 10,
         spritesheet: function(){
             var picker = Math.random()*3;
             if (picker < 1) {
